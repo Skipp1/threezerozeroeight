@@ -22,7 +22,6 @@ class decompose:
 		self.sample_rate = self.filedata[0]
 		self.filedata = self.stereo2mono(self.filedata[1])
 		
-		
 		return 
 	
 	def stereo2mono(self, d, channel='a'):
@@ -69,8 +68,8 @@ class decompose:
 		side_effects: none
 		"""
 		return np.argmin(np.abs(fourier_freqs - f))
+	
 		
-
 	def gauss_select(self, fourier_data, fourier_freqs, octave, noteint):
 		""" select a gaussian set of freqs
 		input:
@@ -100,8 +99,7 @@ class decompose:
 		return ret 
 		
 
-
-	def decompose(self):
+	def decompose(self, filename_out):
 		
 		# ------ fft transform -------#
 		fourier_data = pyfftw.interfaces.numpy_fft.rfft(self.filedata, threads=self.n_cpu, overwrite_input=True)
@@ -110,7 +108,7 @@ class decompose:
 		fourier_freqs = np.fft.rfftfreq(len(self.filedata), 1/self.sample_rate)
 		# ------ fft transform -------#
 		
-		fp = h5py.File('test.hdf5', 'a', libver='latest')
+		fp = h5py.File(filename_out+'.hdf5', 'w', libver='latest')
 		
 		# prevent re-generating gaussian space every time
 		self.g_init = np.linspace(0,len(fourier_data), len(fourier_data))
