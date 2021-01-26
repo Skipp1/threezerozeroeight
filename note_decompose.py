@@ -3,28 +3,25 @@
 from scipy.io import wavfile
 import pyfftw # faster fft than numpy 
 import numpy as np
-import note_utils as note
 import os
+import h5py
+import note_utils as note
 import math_fun
 
 
-class decompose(self):
+class decompose:
 	
-	# prevent re-generating gaussian space every time
-	g_init = np.linspace(0,len(fourier_data), len(fourier_data))
-	
-	# tunable params
-	n_cpu = os.cpu_count()
-	filedata = None
-	width = 0.5
-	
-	def __init__(filename):
+	def __init__(self, filename):
+		# tunable params
+		self.n_cpu = os.cpu_count()
+		self.width = 0.5
 		
 		self.filedata = wavfile.read(filename)
 		
 		# get file information
 		self.sample_rate = self.filedata[0]
 		self.filedata = self.stereo2mono(self.filedata[1])
+		
 		
 		return 
 	
@@ -41,7 +38,7 @@ class decompose(self):
 		side effects: None
 		"""
 		# mono audio 
-		if len(d.shape == 1):
+		if len(d.shape) == 1:
 			# just return as we already have a mono signal
 			return d
 		
@@ -91,8 +88,8 @@ class decompose(self):
 		# get the freq of the next note in the series
 		fplus1 = note.note2freq(int(np.floor((noteint+1)/ 12) + octave), int(np.mod(noteint+1, 12)))
 		
-		mu = freq2index(fourier_freqs, f)
-		sigma = self.width*(freq2index(fourier_freqs, fplus1) - mu)
+		mu = self.freq2index(fourier_freqs, f)
+		sigma = self.width*(self.freq2index(fourier_freqs, fplus1) - mu)
 		
 		# create a Gaussian with mu = note,  sigma = 0.5*(note+1 - note)
 		g = math_fun.gaussian(self.g_init, mu, sigma)
@@ -113,25 +110,22 @@ class decompose(self):
 		fourier_freqs = np.fft.rfftfreq(len(self.filedata), 1/self.sample_rate)
 		# ------ fft transform -------#
 		
-		out_filenames = []
+		fp = h5py.File('test.hdf5', 'a', libver='latest')
+		
+		# prevent re-generating gaussian space every time
+		self.g_init = np.linspace(0,len(fourier_data), len(fourier_data))
 		
 		# for each note do:
 		for octave in range(2,6):
 			for noteint in range(12):
 
 				# select the note we want to look at
-				selected_note = gauss_select(fourier_data, fourier_freqs, octave, noteint)
+				selected_note = self.gauss_select(fourier_data, fourier_freqs, octave, noteint)
 				
 				# inverse fft
 				newdata = pyfftw.interfaces.numpy_fft.irfft(selected_note, threads=self.n_cpu, overwrite_input=True)
 				
-				# how are we going to transform real + imag to only real?
-				savedata = np.imag(newdata) + np.real(newdata)
+				# save our decomposition
+				fp.create_dataset(str(octave) + note.notenames[noteint], data = newdata, dtype=np.float64)
 				
-				# save as a new wav file
-				save_filename = os.path.normpath("decomposition/" + str(octave) + note.notenames[noteint] + ".wav")
-				wavfile.write(save_filename, sample_rate, savedata)
-				
-				out_filenames.append(save_filename)
-						
-		return out_filenames
+		return 
