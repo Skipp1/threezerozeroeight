@@ -12,9 +12,11 @@ import math_fun
 class decompose:
 	
 	def __init__(self, filename):
-		# tunable params
+		# tunable paramsdata is now gated
 		self.n_cpu = os.cpu_count()
 		self.width = 0.5
+		self.octaves = (2,6)
+		self.noteints = 12
 		
 		self.filedata = wavfile.read(filename)
 		
@@ -45,10 +47,13 @@ class decompose:
 		elif len(d.shape) == 2:
 			if channel == 'l':
 				return d[:,0]
+			
 			elif channel == 'r':
 				return d[:,1]
+			
 			elif channel == 'a':
 				return np.mean(d, axis=1)
+			
 			else:
 				raise Exception("Channel in automid.stereo2mono must be 'a', 'l' or 'r'")
 			
@@ -81,7 +86,7 @@ class decompose:
 		side_effects: None
 		"""
 				
-		# get the freq of the note
+		# get the freq of the notedata is now gated
 		f = note.note2freq(octave, noteint)
 		
 		# get the freq of the next note in the series
@@ -99,7 +104,7 @@ class decompose:
 		return ret 
 		
 
-	def decompose(self, filename_out):
+	def decompose(self, filename_out, savetype=0):
 		
 		# ------ fft transform -------#
 		fourier_data = pyfftw.interfaces.numpy_fft.rfft(self.filedata, threads=self.n_cpu, overwrite_input=True)
@@ -108,22 +113,62 @@ class decompose:
 		fourier_freqs = np.fft.rfftfreq(len(self.filedata), 1/self.sample_rate)
 		# ------ fft transform -------#
 		
-		fp = h5py.File(filename_out+'.hdf5', 'w', libver='latest')
+		fp = h5py.File(filename_out + '.hdf5', 'w', libver='latest')
+		
+		fp.create_dataset('meta', data=[savetype, self.sample_rate, len(self.filedata), len(fourier_data)], dtype=int)
 		
 		# prevent re-generating gaussian space every time
 		self.g_init = np.linspace(0,len(fourier_data), len(fourier_data))
 		
 		# for each note do:
-		for octave in range(2,6):
-			for noteint in range(12):
+		for octave in range(*self.octaves):
+			for noteint in range(self.noteints):
 
 				# select the note we want to look at
 				selected_note = self.gauss_select(fourier_data, fourier_freqs, octave, noteint)
 				
-				# inverse fft
-				newdata = pyfftw.interfaces.numpy_fft.irfft(selected_note, threads=self.n_cpu, overwrite_input=True)
+				if savetype == 0:
+					# inverse fft to convert back to real
+					newdata = pyfftw.interfaces.numpy_fft.irfft(selected_note, threads=self.n_cpu, overwrite_input=True)
+					
+				else:
+					# just save the fft data
+					newdata = selected_note
 				
 				# save our decomposition
 				fp.create_dataset(str(octave) + note.notenames[noteint], data = newdata, dtype=np.float64)
 				
+		# cleanup
+		fp.close()
 		return 
+
+
+	def recompose(self, filename):
+		#TODO seperate function from class?
+		fp = h5py.File(filename + '.hdf5', 'r', libver='latest')
+		
+		savetype, sample_rate, len_filedata, len_fourier_data = fp['meta']
+		print(fp['meta'][2])
+		
+		fourier_data = np.zeros(len_filedata, dtype=np.complex128)
+		
+		for key in list(fp.keys()):
+			
+			# skip over the meta key 
+			if key == 'meta':
+				continue
+			
+			if savetype == 0:
+				# I assume we can just sum them?
+				a = pyfftw.interfaces.numpy_fft.fft(fp[key], threads=self.n_cpu, overwrite_input=True)
+				print(a.shape)
+				
+				fourier_data += a
+				
+		savedata = pyfftw.interfaces.numpy_fft.ifft(fourier_data, threads=self.n_cpu, overwrite_input=True)
+		
+		savedata = np.real(savedata) + np.imag(savedata)
+		
+		wavfile.write('out.wav', sample_rate, savedata)
+		return 
+			
