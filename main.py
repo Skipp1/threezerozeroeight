@@ -6,12 +6,13 @@ import note_decompose as nde
 import note_recompose as nre
 import noisegate as ngate
 import note_utils as note
+import sys
 import math_fun
 
 def main():
 	
 	print("decomposing")
-	nde_class = nde.decompose('50Hz+1250Hz.wav')
+	nde_class = nde.decompose(sys.argv[1])
 	nde_class.octaves = (2,15)
 	nde_class.decompose('ns~test')
 	
@@ -34,7 +35,7 @@ def main():
 		fp_out.create_dataset(key, data=d, dtype=d.dtype)
 
 	print("recomposing")
-	nre.recompose('ns~test2', '50Hz+1250Hz-clean')
+	nre.recompose('ns~test2', sys.argv[1]+'-clean')
 	
 	fp.close()
 	fp_out.close()

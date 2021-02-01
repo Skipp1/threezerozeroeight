@@ -2,7 +2,7 @@
 
 import numpy as np
 from scipy.io import wavfile
-import pyfftw
+import fft_wrapper as fft
 import h5py
 import os
 
@@ -24,7 +24,7 @@ def recompose(in_file, out_file):
 	
 	#TODO fix this hack
 	spread = 1000
-	fourier_data = np.zeros(int(np.floor(len_filedata/spread))*spread)
+	data = np.zeros(int(np.floor(len_filedata/spread))*spread)
 	
 	n_cpu = os.cpu_count()
 
@@ -36,7 +36,7 @@ def recompose(in_file, out_file):
 			if key == 'meta':
 				continue
 				# I assume we can just sum them?
-			fourier_data += fp[key]
+			data += fp[key]
 		
 	elif savetype == 1:
 		for key in list(fp.keys()):
@@ -44,13 +44,12 @@ def recompose(in_file, out_file):
 			if key == 'meta':
 				continue
 			# again just summing
-			fourier_data += pyfftw.interfaces.numpy_fft.ifft(fourier_data / (len(fp.keys())-1),
-																									threads=n_cpu, overwrite_input=True)
+			data += fft.ifft(fourier_data / (len(fp.keys())-1), threads=n_cpu, overwrite_input=True)
 		
 	else:
 		 raise Exception("No idea how to handle savetype" + savetype)
 		
-	save_data = fourier_data / (len(fp.keys())-1)
+	save_data = data / (len(fp.keys())-1)
 	
 	save_data = np.real(save_data) + np.imag(save_data)
 	
@@ -76,7 +75,7 @@ def split2wav(file_in):
 	
 	#TODO fix this hack
 	spread = 1000
-	fourier_data = np.zeros(int(np.floor(len_filedata/spread))*spread)
+	data = np.zeros(int(np.floor(len_filedata/spread))*spread)
 	
 	n_cpu = os.cpu_count()
 
@@ -97,8 +96,7 @@ def split2wav(file_in):
 			# skip over the meta key 
 			if key == 'meta':
 				continue
-			save_data = pyfftw.interfaces.numpy_fft.ifft(fourier_data / (len(fp.keys())-1),
-																								threads=n_cpu, overwrite_input=True)
+			save_data = fft.ifft(data / (len(fp.keys())-1), threads=n_cpu, overwrite_input=True)
 			save_data = np.real(save_data) + np.imag(save_data)
 			wavfile.write(key + '.wav', sample_rate, save_data)
 	
@@ -109,6 +107,7 @@ def split2wav(file_in):
 
 
 # ------------------------------------------------------------------------------------------------- #
+
 def cmdline_recomp():
 	file_in = input("what file should I recompose: ") 
 	recompose(file_in, "recomposed")

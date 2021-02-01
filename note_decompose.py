@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 
 from scipy.io import wavfile
-import pyfftw # faster fft than numpy 
+import fft_wrapper as fft
 import numpy as np
 import os
 import h5py
@@ -122,9 +122,7 @@ class decompose:
 	def decompose(self, filename_out, savetype=0):
 		
 		# ------ fft transform -------#
-		fourier_data = pyfftw.interfaces.numpy_fft.rfft(self.filedata,
-		                                                threads=self.n_cpu,
-		                                                overwrite_input=True)
+		fourier_data = fft.rfft(self.filedata, threads=self.n_cpu, overwrite_input=True)
 		
 		# convert samples per second to a list of freqs 
 		fourier_freqs = np.fft.rfftfreq(len(self.filedata), 1/self.sample_rate)
@@ -152,9 +150,7 @@ class decompose:
 				
 				if savetype == 0:
 					# inverse fft to convert back to real
-					newdata = pyfftw.interfaces.numpy_fft.irfft(selected_note,
-					                                            threads=self.n_cpu,
-					                                            overwrite_input=True)
+					newdata = fft.irfft(selected_note, threads=self.n_cpu, overwrite_input=True)
 				elif savetype == 1:
 					# just save the fft data
 					newdata = selected_note
