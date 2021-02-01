@@ -122,7 +122,7 @@ class decompose:
 	def decompose(self, filename_out, savetype=0):
 		
 		# ------ fft transform -------#
-		fourier_data = fft.rfft(self.filedata, threads=self.n_cpu, overwrite_input=True)
+		fourier_data = fft.rfft(self.filedata, threads=self.n_cpu, overwrite_input=True)
 		
 		# convert samples per second to a list of freqs 
 		fourier_freqs = np.fft.rfftfreq(len(self.filedata), 1/self.sample_rate)
@@ -132,7 +132,7 @@ class decompose:
 		
 		# save some metadata
 		fp.create_dataset('meta',
-		                  data=[savetype, self.sample_rate, len(self.filedata), len(fourier_data)],
+		                  data=[savetype, self.sample_rate],
 		                  dtype=int)
 		
 		# prevent re-generating gaussian space every time

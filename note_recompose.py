@@ -6,6 +6,15 @@ import fft_wrapper as fft
 import h5py
 import os
 
+def get_file_len(fp):
+	""" get the length of the data we are summing together """
+	for key in list(fp.keys()):
+		if key != 'meta':
+		# find the first non-meta entry
+			length = len(fp[key])
+			break
+	return length 
+
 def recompose(in_file, out_file):
 	
 	""" recompose a file from a bunch of diffrent decomposed notes 
@@ -20,25 +29,27 @@ def recompose(in_file, out_file):
 	
 	fp = h5py.File(in_file + '.hdf5', 'r', libver='latest')
 	
-	savetype, sample_rate, len_filedata, len_fourier_data = fp['meta']
-	
-	#TODO fix this hack
-	spread = 1000
-	data = np.zeros(int(np.floor(len_filedata/spread))*spread)
-	
-	n_cpu = os.cpu_count()
+	savetype, sample_rate = fp['meta']
 
+	n_cpu = os.cpu_count()
 	
 	if savetype == 0:
+		
+		data = np.zeros(get_file_len(fp))
+		
 		for key in list(fp.keys()):
-			
 			# skip over the meta key 
 			if key == 'meta':
 				continue
+			
 				# I assume we can just sum them?
 			data += fp[key]
 		
 	elif savetype == 1:
+		
+		# because we are using rfft the fourier_data len is 1/2 the file_len
+		data = np.zeros(get_file_len(fp) * 2)
+		
 		for key in list(fp.keys()):
 			# skip over the meta key 
 			if key == 'meta':
@@ -71,15 +82,14 @@ def split2wav(file_in):
 	
 	fp = h5py.File(in_file + '.hdf5', 'r', libver='latest')
 	
-	savetype, sample_rate, len_filedata, len_fourier_data = fp['meta']
-	
-	#TODO fix this hack
-	spread = 1000
-	data = np.zeros(int(np.floor(len_filedata/spread))*spread)
+	savetype, sample_rate = fp['meta']
 	
 	n_cpu = os.cpu_count()
 
 	if savetype == 0:
+		
+		data = np.zeros(get_file_len(fp))
+		
 		for key in list(fp.keys()):
 			
 			# skip over the meta key 
@@ -91,12 +101,16 @@ def split2wav(file_in):
 			wavfile.write(key + '.wav', sample_rate, save_data)
 		
 	elif savetype == 1:
+		
+		# because we are using rfft the fourier_data len is 1/2 the file_len
+		data = np.zeros(get_file_len(fp) * 2)
+		
 		for key in list(fp.keys()):
 		
 			# skip over the meta key 
 			if key == 'meta':
 				continue
-			save_data = fft.ifft(data / (len(fp.keys())-1), threads=n_cpu, overwrite_input=True)
+			save_data = fft.irfft(data / (len(fp.keys())-1), threads=n_cpu, overwrite_input=True)
 			save_data = np.real(save_data) + np.imag(save_data)
 			wavfile.write(key + '.wav', sample_rate, save_data)
 	
