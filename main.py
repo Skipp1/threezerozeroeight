@@ -12,7 +12,7 @@ import math_fun
 def main():
 	
 	print("decomposing")
-	nde_class = nde.decompose(sys.argv[1])
+	nde_class = nde.decompose('test.wav')
 	nde_class.octaves = (2,15)
 	nde_class.decompose('ns~test')
 	
@@ -35,7 +35,7 @@ def main():
 		fp_out.create_dataset(key, data=d, dtype=d.dtype)
 
 	print("recomposing")
-	nre.recompose('ns~test2', sys.argv[1]+'-clean')
+	nre.recompose('ns~test2', 'out')
 	
 	fp.close()
 	fp_out.close()
