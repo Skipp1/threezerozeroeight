@@ -93,12 +93,22 @@ class decompose:
 		# get the freq of the notedata is now gated
 		f = note.note2freq(octave, noteint)
 		
+		k= note.freq2note(f)
+		
+		print(octave, noteint, f, k)
+		
 		# get the freq of the next note in the series
-		fplus1 = note.note2freq(int(np.floor((noteint+1)/ 12) + octave),
-		                        int(np.mod(noteint+1, 12)))
+		fminus1 = note.note2freq(int(np.floor((noteint-1)/ 12) + octave),
+		                        int(np.mod(noteint-1, 12)))
 		
 		mu = self.freq2index(fourier_freqs, f)
-		sigma = self.width*(self.freq2index(fourier_freqs, fplus1) - mu)
+		muminus1 = self.freq2index(fourier_freqs, fminus1)
+		
+		sigma = self.width*(mu - muminus1)
+		
+		if (mu - muminus1) == 0: 
+			# we reached the end of the fourier 
+			return np.nan
 		
 		# create a Gaussian with mu = note,  sigma = 0.5*(note+1 - note)
 		g = math_fun.gaussian(self.g_init, mu, sigma)
@@ -137,6 +147,9 @@ class decompose:
 				# select the note we want to look at
 				selected_note = self.gauss_select(fourier_data, fourier_freqs, octave, noteint)
 				
+				if selected_note is np.nan:
+					break
+				
 				if savetype == 0:
 					# inverse fft to convert back to real
 					newdata = pyfftw.interfaces.numpy_fft.irfft(selected_note,
@@ -150,64 +163,13 @@ class decompose:
 					raise Exception("No idea how to handle savetype" + savetype)
 				
 				# save our decomposition
-				fp.create_dataset(str(octave) + note.notenames[noteint], data = newdata, dtype=np.float64)
+				fp.create_dataset(str(octave) + '-' + note.notenames[noteint], data = newdata, dtype=np.float64)
+				
+			if selected_note is np.nan:
+				print("overrun bounds, safely stopping at ", octave, note.notenames[noteint])
+				break
 				
 		# cleanup
 		fp.close()
 		return 
 
-
-def recompose(in_file, out_file):
-	
-	""" recompose a file from a bunch of diffrent decomposed notes 
-	NOTE: not in the decompose class, but resides in the same file
-	
-	inputs: in_file, hdf5 file we want to recompose
-	        out_file, wav file we want to write to
-	
-	return: None
-	side_effects: generate wav file in filesystem
-	"""
-	
-	fp = h5py.File(in_file + '.hdf5', 'r', libver='latest')
-	
-	savetype, sample_rate, len_filedata, len_fourier_data = fp['meta']
-	
-	#TODO fix this hack
-	spread = 1000
-	fourier_data = np.zeros(int(np.floor(len_filedata/spread))*spread)
-	
-	n_cpu = os.cpu_count()
-
-	
-	if savetype == 0:
-		for key in list(fp.keys()):
-			
-			# skip over the meta key 
-			if key == 'meta':
-				continue
-				# I assume we can just sum them?
-			fourier_data += fp[key]
-		savedata = fourier_data / (len(fp.keys())-1)
-		
-	elif savetype == 1:
-		for key in list(fp.keys()):
-			
-				# skip over the meta key 
-				if key == 'meta':
-					continue
-			
-				# I assume we can just sum them?
-				fourier_data += pyfftw.interfaces.numpy_fft.fft(fp[key], threads=n_cpu, overwrite_input=True)
-				
-		savedata = pyfftw.interfaces.numpy_fft.ifft(fourier_data / (len(fp.keys())-1),
-		                                            threads=n_cpu, overwrite_input=True)
-	
-	else:
-		 raise Exception("No idea how to handle savetype" + savetype)
-		
-	savedata = np.real(savedata) + np.imag(savedata)
-	
-	wavfile.write(out_file + '.wav', sample_rate, savedata)
-	
-	return 
