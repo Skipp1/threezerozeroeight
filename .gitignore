@@ -36,6 +36,7 @@ MANIFEST
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
+.directory
 
 # Unit test / coverage reports
 htmlcov/
@@ -131,3 +132,4 @@ dmypy.json
 
 # project stuff
 *.hdf5
+wavs/
