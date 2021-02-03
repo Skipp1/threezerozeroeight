@@ -1,21 +1,6 @@
 #! /usr/bin/env python3
 
 import numpy as np
-#import h5py
-
-
-#def spreading(data, spread):
-	
-	#for i in range(len(data)):
-		#if (i < spread):
-			#segment = np.zeros(spread)
-			#segment[-i-1:-1] = data[0:i]
-		#else:
-			#segment = data[i-spread:i]
-			
-		#if segment.all() > 1:
-			#data[i] = True
-		
 
 def noisegate(level, data, mult=1, spread=10):
 	
@@ -28,20 +13,31 @@ def noisegate(level, data, mult=1, spread=10):
 	return: gated data
 	side effects: None
 	"""
-	# calculate the opening of the gate
+	
+	# trim the end of the data to make it a multiple of spread
+	oldlen = len(data)
 	newlen = int(np.floor(len(data)/spread))*spread
+	
+	# trim the data 
 	data = data[0:newlen]
+	
+	# calculate the locations where the data is greater than level
 	gated_data_mask = np.greater(np.abs(data), level)
 	
-	#spreading(gated_data_mask, spread)
+	# transform into a 2d array of shape spread x newlen/spread
 	gated_data_mask = gated_data_mask.reshape(int(newlen/spread), spread)
+	
+	# sum along the spread axis
 	gated_data_mask = np.sum(gated_data_mask, axis=1, dtype=bool)
 	
-	# TODO: numpy repeat
+	# return to newlen, by repeating each value spread times
 	gated_data_mask = np.repeat(gated_data_mask, spread)
 	
 	# set selected cells to 0
 	data[np.logical_not(gated_data_mask)] = 0
+	
+	# restore the data to its orig length to prevent confusion later on
+	data = np.append(data, np.zeros(oldlen - newlen))
 	
 	return data 
 
@@ -53,18 +49,14 @@ def noisegate_rel(self, level, data, spread=10):
 	NOTE: If the note is not found anywhere, it will
 	accidentially pick stuff up from random noisegate
 	"""
+	# convert to a 1-0 scale
+	data_max = np.max(data) 
+	data = data / data_max
 	
-	data = data / np.max(data)
-	return noisegate(level, data, spread)
+	# apply noisegate
+	gated_data = noisegate(level, data, spread)
+	
+	# return to previous scaling
+	return gated_data * data_max
 
-
-#def noisegate_deriv(grad, data, sample_rate):
-	##TODO
-	#""" do something with the gradient? (IDK havent implemented it yet)
-	#"""
-	
-	#gradient_data = np.gradient(data, 1/sample_rate)
-	#gated_data = gradient_data > grad 
-	
-	#return gated_data 
 

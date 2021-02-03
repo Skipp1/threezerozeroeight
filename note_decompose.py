@@ -132,7 +132,7 @@ class decompose:
 		
 		# save some metadata
 		fp.create_dataset('meta',
-		                  data=[savetype, self.sample_rate],
+		                  data=[savetype, self.sample_rate, len(self.filedata), len(fourier_data)],
 		                  dtype=int)
 		
 		# prevent re-generating gaussian space every time

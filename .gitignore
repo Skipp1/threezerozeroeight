@@ -132,5 +132,5 @@ dmypy.json
 
 # project stuff
 *.hdf5
+*.wav
 wavs/
-out.wav
