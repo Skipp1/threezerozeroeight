@@ -35,7 +35,7 @@ def main():
 		fp_out.create_dataset(key, data=d, dtype=d.dtype)
 
 	print("recomposing")
-	nre.recompose('ns~test2', 'out')
+	nre.recompose('ns~test2', 'out.wav')
 	
 	fp.close()
 	fp_out.close()
