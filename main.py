@@ -4,7 +4,7 @@ import numpy as np
 import h5py
 import note_decompose as nde
 import note_recompose as nre
-import noisegate as ngate
+import noise_gate_sigma as ngs
 import note_utils as note
 import sys
 import math_fun
@@ -12,10 +12,14 @@ import math_fun
 def main():
 	
 	print("decomposing data")
-	nde_class = nde.decompose('test.wav')
+	nde_class = nde.decompose('spoken.wav')
 	nde_class.octaves = (2,15)
 	nde_class.decompose('ns~test')
 
+	print("decomposing bg")
+	ngs_class = ngs.noise_gate_sigma('bg_fan.wav', nde_class.octaves)
+	
+		
 	fp = h5py.File('ns~test.hdf5', 'r', libver='latest')
 	fp_out = h5py.File('ns~test2.hdf5', 'w', libver='latest')
 	
@@ -30,7 +34,7 @@ def main():
 		freq = note.note2freq(int(key.split('-')[0]), key.split('-')[1])
 		print("noise gating: %s \t %.2f Hz " % (key, freq))
 	
-		d = ngate.noisegate(0.1*math_fun.pink_power(freq, alpha=2), d, spread=1000)
+		d = ngs_class.noisegate(d, key, 2, spread=1000)
 		
 
 		fp_out.create_dataset(key, data=d, dtype=d.dtype)
