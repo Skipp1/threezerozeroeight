@@ -11,11 +11,11 @@ import math_fun
 
 def main():
 	
-	print("decomposing")
+	print("decomposing data")
 	nde_class = nde.decompose('test.wav')
 	nde_class.octaves = (2,15)
 	nde_class.decompose('ns~test')
-	
+
 	fp = h5py.File('ns~test.hdf5', 'r', libver='latest')
 	fp_out = h5py.File('ns~test2.hdf5', 'w', libver='latest')
 	
@@ -31,6 +31,7 @@ def main():
 		print("noise gating: %s \t %.2f Hz " % (key, freq))
 	
 		d = ngate.noisegate(0.1*math_fun.pink_power(freq, alpha=2), d, spread=1000)
+		
 
 		fp_out.create_dataset(key, data=d, dtype=d.dtype)
 

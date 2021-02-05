@@ -42,7 +42,7 @@ def noisegate(level, data, mult=1, spread=10):
 	return data 
 
 
-def noisegate_rel(self, level, data, spread=10):
+def noisegate_rel(level, data, spread=10):
 	""" same as above but use a level between 0-1 
 	Returns the relative noisegate
 	
