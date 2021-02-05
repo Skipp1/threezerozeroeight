@@ -7,6 +7,9 @@ def gaussian(x, mu, sig):
 	""" return a Gaussian distribution over x"""
 	return 1/(sig * np.sqrt(2*np.pi)) * np.exp((-1/2) * ((x - mu)/sig)**2)
 
+def gaussian_max1(x, mu, sig):
+	""" return a Gaussian distribution over x where the pean of the gaussian is 1"""
+	return np.exp((-1/2) * ((x - mu)/sig)**2)
 
 def pink_power(f, alpha=1, scale=1):
 	""" power spectral density for pink noise """

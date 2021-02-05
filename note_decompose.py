@@ -27,6 +27,12 @@ class decompose:
 		# get file information
 		self.sample_rate = self.filedata[0]
 		self.filedata = self.stereo2mono(self.filedata[1])
+		
+		# convert length to a multiple of 2 because fft does this and it makes things 
+		# get confused otherwise
+		if len(self.filedata) % 2 == 1:
+			self.filedata = self.filedata[0:-1]
+			
 		return
 	
 	def stereo2mono(self, d, channel='a'):
@@ -93,10 +99,6 @@ class decompose:
 		# get the freq of the notedata is now gated
 		f = note.note2freq(octave, noteint)
 		
-		k= note.freq2note(f)
-		
-		print(octave, noteint, f, k)
-		
 		# get the freq of the next note in the series
 		fminus1 = note.note2freq(int(np.floor((noteint-1)/ 12) + octave),
 		                        int(np.mod(noteint-1, 12)))
@@ -111,10 +113,12 @@ class decompose:
 			return np.nan
 		
 		# create a Gaussian with mu = note,  sigma = 0.5*(note+1 - note)
-		g = math_fun.gaussian(self.g_init, mu, sigma)
+		g = math_fun.gaussian_max1(self.g_init, mu, sigma)
+		
 		
 		# multiply to select only the note we are looking at
 		ret = fourier_data * g 
+		#print(ret.dtype, fourier_data.dtype, g.dtype)
 		
 		return ret 
 		
@@ -138,6 +142,7 @@ class decompose:
 		# prevent re-generating gaussian space every time
 		self.g_init = np.linspace(0,len(fourier_data), len(fourier_data))
 		
+		
 		# for each note do:
 		for octave in range(*self.octaves):
 			for noteint in range(self.noteints):
@@ -151,6 +156,7 @@ class decompose:
 				if savetype == 0:
 					# inverse fft to convert back to real
 					newdata = fft.irfft(selected_note, threads=self.n_cpu, overwrite_input=True)
+					
 				elif savetype == 1:
 					# just save the fft data
 					newdata = selected_note
@@ -159,7 +165,7 @@ class decompose:
 					raise Exception("No idea how to handle savetype" + savetype)
 				
 				# save our decomposition
-				fp.create_dataset(str(octave) + '-' + note.notenames[noteint], data = newdata, dtype=np.float64)
+				fp.create_dataset(str(octave) + '-' + note.notenames[noteint], data = newdata, dtype=newdata.dtype)
 				
 			if selected_note is np.nan:
 				print("overrun bounds, safely stopping at ", octave, note.notenames[noteint])
@@ -167,5 +173,7 @@ class decompose:
 				
 		# cleanup
 		fp.close()
+		
+		
 		return 
 

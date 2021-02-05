@@ -60,17 +60,18 @@ def recompose(in_file, out_file='out.wav', compose_to='combine'):
 		
 		if compose_to == 'combine':
 			# convert to real & sum
-			data += save_prep(fp[key], n_cpu, save_type)
+			data += save_prep(np.real(fp[key]) + np.imag(fp[key]), n_cpu, save_type)
 			
 		else:
 			# save each key as a seperate wav file depending on the note
 			save_data = save_prep(fp[key], n_cpu, save_type)	
-			save_data = (np.real(save_data) + np.imag(save_data)) / (len(fp.keys())-1)
+			save_data = (np.real(save_data) + np.imag(save_data))
 			wavfile.write(key + '.wav', sample_rate, save_data)
 		
 	if compose_to == 'combine':
 		# save the summation of the data
-		save_data = (np.real(data) + np.imag(data)) / (len(fp.keys())-1)
+		# TODO fix scaling
+		save_data = (np.real(data) + np.imag(data)) / (440*len(fp.keys())-1)
 		wavfile.write(out_file, sample_rate, save_data)
 		
 	return 
@@ -80,7 +81,11 @@ def recompose(in_file, out_file='out.wav', compose_to='combine'):
 def cmdline_recomp():
 	""" for use on the command line """
 	file_in = input("what file should I recompose: ") 
-	recompose(file_in, "recomposed.wav")
+	compose_type = input("all [y/n]: ") 
+	if compose_type.upper() == "Y":
+		recompose(file_in, compose_to='all')
+	else:
+		recompose(file_in, out_file="recomposed.wav")
 
 if __name__ == "__main__":
 	cmdline_recomp()

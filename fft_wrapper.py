@@ -5,14 +5,16 @@ fall back to numpy (or another fft program if you want to use that here)
 """
 
 # select what fft we are going to use
+
+import numpy
 try:
 	import pyfftw
 	fft_ver = 'pyfftw'
 except:
-	import numpy
+	print("falling back to numpy")
 	fft_ver = 'numpy'
 	
-	
+
 	
 def fft_interface_select():
 	""" return the interface class for the fft """
