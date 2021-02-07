@@ -14,7 +14,11 @@ class decompose:
 	
 	def __init__(self, filename):
 		
-		""" global var declarations """
+		""" This procedure declares global variables. Reads in .wav file information, 
+		converts stereo audio to mono then standardises to multiples of 2
+		inputs:
+			filename=> .wav file that will be decomposed
+		"""
 		
 		# tunable paramsdata is now gated
 		self.n_cpu = os.cpu_count()
