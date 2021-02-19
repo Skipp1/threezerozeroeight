@@ -71,7 +71,7 @@ def recompose(in_file, out_file='out.wav', compose_to='combine'):
 	if compose_to == 'combine':
 		# save the summation of the data
 		# TODO fix scaling
-		save_data = (np.real(data) + np.imag(data)) / (440*len(fp.keys())-1)
+		save_data = (np.real(data) + np.imag(data)) / np.max( (np.real(data) + np.imag(data)))
 		wavfile.write(out_file, sample_rate, save_data)
 		
 	return 
