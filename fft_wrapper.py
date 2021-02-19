@@ -13,22 +13,21 @@ try:
 except:
 	print("falling back to numpy")
 	fft_ver = 'numpy'
-	
 
-	
+
 def fft_interface_select():
 	""" return the interface class for the fft """
 	
 	if fft_ver == 'pyfftw':
-		return  pyfftw.interfaces.numpy_fft
+		return pyfftw.interfaces.numpy_fft
 	
 	elif fft_ver == 'numpy':
 		return numpy.fft
 	
 	else:
 		raise Exception("Dont know this fft type")
-	
-	
+
+
 def fft_interface_format(fft_method, data, **kargs):
 	""" run the fft /ifft over data using kargs """
 	if fft_ver == 'pyfftw':
@@ -36,7 +35,7 @@ def fft_interface_format(fft_method, data, **kargs):
 		return fft_method(data, **kargs)
 	
 	elif fft_ver == 'numpy':
-		# select only the args that are compatible with numpy 
+		# select only the args that are compatible with numpy
 		new_kargs = {}
 		for i in ('n', 'a', 'axis', 'norm'):
 			try:
@@ -44,27 +43,29 @@ def fft_interface_format(fft_method, data, **kargs):
 			except KeyError:
 				# the arg wasnt passed in the first place
 				pass
-			
-		return fft_method(data, **new_kargs)
 		
-	
+		return fft_method(data, **new_kargs)
+
+
 def fft(data, **kargs):
 	""" fft wrapper """
-	interface = fft_interface_select() 
+	interface = fft_interface_select()
 	return fft_interface_format(interface.fft, data, **kargs)
-		
+
+
 def ifft(data, **kargs):
 	""" ifft wrapper """
-	interface = fft_interface_select() 
+	interface = fft_interface_select()
 	return fft_interface_format(interface.ifft, data, **kargs)
-	
+
+
 def rfft(data, **kargs):
 	""" rfft wrapper """
-	interface = fft_interface_select() 
+	interface = fft_interface_select()
 	return fft_interface_format(interface.rfft, data, **kargs)
-		
+
+
 def irfft(data, **kargs):
 	""" irfft wrapper """
-	interface = fft_interface_select() 
+	interface = fft_interface_select()
 	return fft_interface_format(interface.irfft, data, **kargs)
-
