@@ -133,4 +133,8 @@ dmypy.json
 # project stuff
 *.hdf5
 *.wav
-wavs/
+
+# generated plots
+*.pdf
+*.pgf
+*.png
