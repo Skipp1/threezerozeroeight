@@ -4,11 +4,22 @@ import numpy as np
 import h5py
 import note_decompose as nde
 import scipy.signal as signal
-import matplotlib.pyplot as plt
-
 
 
 def wave2vol(wave, spread=10, detect_type='peak'):
+	""" convert AC audio into DC volume, do this by dicing up the audio and picking
+	the peak or the rms value as the audio
+	
+	spread => the size of the window
+	detect_type => how we are finding the volume
+	wave => input data
+	
+	return:
+	volume array of same len as wave
+	
+	side effects:
+	None
+	"""
 	
 	oldlen = len(wave)
 	newlen = int(np.ceil(len(wave) / spread)) * spread
@@ -35,7 +46,23 @@ def wave2vol(wave, spread=10, detect_type='peak'):
 
 
 class noise_gate_sigma:
+	""" class only used to store the mean & sigma global vars """
 	def __init__(self, bg_file, octave):
+		""" calculate & store the mean and stddev values for a short sample of the 
+		background noise
+		
+		input:
+		bg_file => path to background file
+		octave -> octaves that we are looking at (needs to be the same as the main audio)
+		
+		return:
+		None
+		
+		Side effects:
+		create file for background noise &  
+		update self.bg_sigma and self.bg_mean
+		"""
+		
 		nde_class = nde.decompose(bg_file)
 		nde_class.octaves = octave
 		nde_class.decompose('ns~background')
@@ -58,10 +85,10 @@ class noise_gate_sigma:
 	
 	def noise_gate_sigma(self, data, key, sigma, spread=1000):
 		""" noise gate: let noise through once it reaches a certain level
-		level => abs level at witch the noise gate activates
 		data => the data we want to operate on
-		mult => scalar multiplier for the data
+		sigma => stdev above the mean we want to look at
 		spread => how long after the last activation do we shut off
+		key => what note we are looking at
 		
 		return: gated data
 		side effects: None
@@ -88,9 +115,11 @@ except:
 	print("tftb not found")
 	tftb = False
 
+
 def noise_gate_PWVD(data, spread=1000):
 	
 	# TODO something smoothed_pseudo_wigner_ville
+	
 	if tbtb is False:
 		raise FileNotFoundError("tftb must be available to use PWVD")
 	
