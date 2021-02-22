@@ -8,6 +8,12 @@ import noise_gate as ngate
 import note_utils as note
 import sys
 import math_fun
+sudo pip install adaptfilt
+import adaptfilt as adf
+
+
+
+
 
 
 def main():
@@ -41,6 +47,21 @@ def main():
 	
 	print("recomposing")
 	nre.recompose('ns~test2', 'out.wav')
+	
+	y, e, w = adf.nlms(u, d, M, step, eps=0.001, leak=0, initCoeffs=None, N=None, returnCoeffs=False)
+	u=nde_class # decomposed wave
+	d=          # recomposed wave or a guess of the desired wave 
+	M=100
+	step=1
+	
+	plt.figure()
+        plt.title("Noise cancellation")
+        plt.plot(u, label="initial signal")
+        plt.plot(d, label="desired siganl")
+	plt.plot(y, label="output signal")
+	
+	
+	return 
 	
 	fp.close()
 	fp_out.close()
