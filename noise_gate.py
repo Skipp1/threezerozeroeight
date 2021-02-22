@@ -5,7 +5,7 @@ import h5py
 import note_decompose as nde
 import scipy.signal as signal
 import matplotlib.pyplot as plt
-import tftb.processing as tftb
+
 
 
 def wave2vol(wave, spread=10, detect_type='peak'):
@@ -81,10 +81,18 @@ class noise_gate_sigma:
 
 # -------------------------------------------------------------------------------------------- #
 
+try:
+	# bit of an esoteric library, so dont error if not found
+	import tftb.processing as tftb
+except:
+	print("tftb not found")
+	tftb = False
 
 def noise_gate_PWVD(data, spread=1000):
 	
 	# TODO something smoothed_pseudo_wigner_ville
+	if tbtb is False:
+		raise FileNotFoundError("tftb must be available to use PWVD")
 	
 	data_volume = wave2vol(data, spread=spread)
 	

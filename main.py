@@ -18,7 +18,7 @@ def main():
 	nde_class.decompose('ns~test')
 	
 	print("decomposing bg")
-	ng_class = ngate.noise_gate_sigma('bg_fan.wav', nde_class.octaves)
+	ngs_class = ngate.noise_gate_sigma('bg_fan.wav', nde_class.octaves)
 	
 	fp = h5py.File('ns~test.hdf5', 'r', libver='latest')
 	fp_out = h5py.File('ns~test2.hdf5', 'w', libver='latest')
