@@ -34,7 +34,7 @@ def main():
 		freq = note.note2freq(int(key.split('-')[0]), key.split('-')[1])
 		print("noise gating: %s \t %.2f Hz " % (key, freq))
 		
-		d = ngs_class.noise_gate_sigma(d, key, 2, spread=1000)
+		d = ngs_class.noise_gate_sigma(d, key, 5, spread=1000)
 		#d = ngs_class.noise_gate_PWVD(d, spread=1000)
 		
 		fp_out.create_dataset(key, data=d, dtype=d.dtype)

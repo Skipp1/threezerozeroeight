@@ -1,18 +1,19 @@
 #! /usr/bin/env python3
 
 import numpy as np
+import note_utils as note
 import h5py
 import note_decompose as nde
 import scipy.signal as signal
 
 
-def wave2vol(wave, spread=10, detect_type='peak'):
+def wave2vol(data=None, spread=None, detect_type='peak'):
 	""" convert AC audio into DC volume, do this by dicing up the audio and picking
 	the peak or the rms value as the audio
 	
 	spread => the size of the window
 	detect_type => how we are finding the volume
-	wave => input data
+	wave => tuple containing fp & key, or the actual data itself
 	
 	return:
 	volume array of same len as wave
@@ -20,6 +21,32 @@ def wave2vol(wave, spread=10, detect_type='peak'):
 	side effects:
 	None
 	"""
+	
+	if type(data) == tuple:
+		fp_key = True
+		fp = data[0]
+		key = data[1]
+		wave = np.copy(fp[key])
+	
+	else:
+		fp_key = False
+		wave = np.copy(data)
+	
+	if spread is None:
+		if fp_key:
+			# (Lin et al. 2008 Varying-Window-Length Time-Frequency Peak Filtering And Its Application
+			# To Seismic Data): The optimal Window Length can be expressed as a function of the dominant
+			# frequency fd and the sampling frequency fs
+			fd = note.note2freq(int(key.split('-')[0]), key.split('-')[1])
+			fs = fp['meta'][1]
+			
+			alpha = 0.384  # Lin et al 2008
+			
+			spread = alpha * fs / fd
+			spread = int(np.ceil(spread))
+		
+		else:
+			spread = 1000  # default value if we dont have spread
 	
 	oldlen = len(wave)
 	newlen = int(np.ceil(len(wave) / spread)) * spread
@@ -77,13 +104,13 @@ class noise_gate_sigma:
 			if key == 'meta':
 				continue
 			
-			self.bg_sigma[key] = np.std(wave2vol(fp[key], spread=1000))
-			self.bg_mean[key] = np.mean(wave2vol(fp[key], spread=1000))
+			self.bg_sigma[key] = np.std(wave2vol((fp, key)))
+			self.bg_mean[key] = np.mean(wave2vol((fp, key)))
 		
 		fp.close()
 		return
 	
-	def noise_gate_sigma(self, data, key, sigma, spread=1000):
+	def noise_gate_sigma(self, data, key, sigma, spread=None):
 		""" noise gate: let noise through once it reaches a certain level
 		data => the data we want to operate on
 		sigma => stdev above the mean we want to look at
@@ -94,9 +121,13 @@ class noise_gate_sigma:
 		side effects: None
 		"""
 		
-		level = self.bg_mean[key] + (self.bg_sigma[key] * sigma)
+		if type(data) == h5py._hl.files.File:
+			volume = wave2vol((data, key), spread=spread)
+			data = data[key]
+		else:
+			volume = wave2vol(data, spread=spread)
 		
-		volume = wave2vol(data, spread=spread)
+		level = self.bg_mean[key] + (self.bg_sigma[key] * sigma)
 		
 		vol_mask = np.logical_not(np.greater(volume, level))
 		
