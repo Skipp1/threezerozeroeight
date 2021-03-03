@@ -5,6 +5,7 @@ import note_utils as note
 import h5py
 import note_decompose as nde
 import scipy.signal as signal
+import adaptfilt as ada
 
 
 def wave2vol(data=None, spread=None, detect_type='peak'):
@@ -137,7 +138,135 @@ class noise_gate_sigma:
 		return new_data
 
 
+class noise_gate_adaptave:
+	
+	# not actually a noise gate but whatever
+	
+	def __init__(self, bg_file, octave):
+		# decompose the background noise
+		nde_class = nde.decompose(bg_file)
+		nde_class.octaves = octave
+		nde_class.decompose('ns~background')
+		
+		# ---- and now for global vars in disguise ----- #
+		# file stuff
+		self.fp = h5py.File('ns~background.hdf5', 'r', libver='latest')
+		self.spread = 1000
+		self.data_len = 0
+		
+		# vars for nlms
+		self.taps = 100
+		self.mu = 0.1
+		self.eps = 0.001
+		self.leak = 0
+		self.initCoeffs = None
+		self.n = None
+		self.returnCoeffs = False
+		
+		# other interesting values that get generated
+		self.err = 0
+		self.weights = 0
+		# --------------------------------------------- #
+		
+		return
+	
+	def dedup_vol(self, vol):
+		""" wave2vol returns a repeated thing 
+		1 1 1 2 2 2 3 3 3 etc 
+		de-duplicate that
+		
+		input: volume 
+		
+		global input: spread => amount of times each value is duplicated
+		
+		output: shortened volume
+		side_effects: None
+		"""
+		
+		return vol[0::self.spread]
+	
+	def redup_vol(self, vol):
+		""" wave2vol returns a repeated thing 
+		1 1 1 2 2 2 3 3 3 etc 
+		dedup_vol deduplicates that
+		
+		set us re-duplicate that to its init length
+		
+		input: volume 
+		
+		global input: spread => amount of times each value is duplicated
+		              data_len => how long the data was origenally
+		
+		output: re-lengthened volume
+		side_effects: None
+		"""
+		
+		return np.repeat(vol, self.spread)[:self.data_len]
+	
+	def noise_gate_adaptave(self, data, key):
+		""" the filtering 
+		
+		input: data => data we want to filtering
+		       key => key fo the freq we are filtering 
+		       
+		globals: self.taps => number of weights
+		
+		output: the filtered data 
+		
+		side_effects:
+		self.err & self.weights get updated
+		self.data_len gets updated (nothing will probs change)
+		"""
+		
+		self.data_len = len(data)
+		
+		v_data = wave2vol(data)
+		v_noise = wave2vol(self.fp[key])
+		
+		v_data = self.dedup_vol(v_data)
+		v_noise = self.dedup_vol(v_noise)
+		
+		# extend noise so that it is the same length as data
+		while len(v_noise) < len(v_data):
+			v_noise = np.append(v_noise, v_noise)
+		v_noise = v_noise[:len(v_data)]
+		
+		# calculate nlms
+		est_v_noise, self.err, self.weights = self.nlms(v_data, v_noise)
+		
+		# nlms makes the data offset & slightly shorter
+		est_v_noise = np.roll(est_v_noise, self.taps - 1)
+		est_v_noise = np.append(est_v_noise, est_v_noise[0:self.taps - 1])
+		
+		# calculate the estimated data volume
+		est_v_data = v_data - est_v_noise
+		
+		# set negative volume to 0
+		est_v_data[est_v_data < 0] = 0
+		
+		v_data = self.redup_vol(v_data)
+		est_v_data = self.redup_vol(est_v_data)
+		
+		# re-volumise the data
+		return data * est_v_data / v_data
+	
+	def nlms(self, v_data, v_noise):
+		""" currently just an alias to adaptfilt """
+		return ada.nlms(v_data,
+		                v_noise,
+		                self.taps,
+		                self.mu,
+		                eps=self.eps,
+		                leak=self.leak,
+		                initCoeffs=self.initCoeffs,
+		                N=self.n,
+		                returnCoeffs=self.returnCoeffs)
+
+
 # -------------------------------------------------------------------------------------------- #
+"""
+
+Probs not going to be persuing this but whatever
 
 try:
 	# bit of an esoteric library, so dont error if not found
@@ -149,7 +278,7 @@ except:
 
 def noise_gate_PWVD(data, spread=1000):
 	
-	# TODO something smoothed_pseudo_wigner_ville
+	# something smoothed_pseudo_wigner_ville
 	
 	if tbtb is False:
 		raise FileNotFoundError("tftb must be available to use PWVD")
@@ -178,3 +307,4 @@ def noise_gate_PWVD(data, spread=1000):
 	new_data = new_data * volume_scale
 	
 	return new_data
+"""
